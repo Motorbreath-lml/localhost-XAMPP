@@ -1,5 +1,6 @@
 <?php
 const HOST_NAMES_WINDOWS = "C:\windows\system32\drivers\\etc\hosts";
+const VIRTUAL_HOSTS = "C:\\xampp\apache\conf\\extra\httpd-vhosts.conf";
 
 function extractHostnames($filePath)
 {
@@ -27,11 +28,42 @@ function extractHostnames($filePath)
 
   return $extractedHostnames;
 }
+
+function extractVHosts($filePath)
+{
+  $virtualHosts =[];
+  $contador=0;
+  if (($fileHandle = fopen($filePath, 'r')) !== false) {
+    while (($line = fgets($fileHandle)) !== false) {
+      // Extract DocumentRoot after "    DocumentRoot  "
+      if(preg_match('/^\s+DocumentRoot\s+(.+)$/', $line, $matches)){
+        $vhost=str_replace('"','',trim($matches[1]));
+        $virtualHosts[$contador]['DocumentRoot']=str_replace('/','\\',$vhost);
+      }      
+      // Extract ServerName after "    ServerName  "
+      if(preg_match('/^\s+ServerName\s+(.+)$/', $line, $matches)){
+        $virtualHosts[$contador++]['ServerName']=trim($matches[1]);
+      }
+    }
+    fclose($fileHandle);
+  } else {
+    echo "Error opening file: $filePath";
+  }
+  return $virtualHosts;
+}
+
+function escapeBackslashes($path)
+{
+  // Usar str_replace para reemplazar cada barra invertida con dos barras invertidas
+  return str_replace('\\', '\\\\', $path);
+}
+
 $hostnames = extractHostnames(HOST_NAMES_WINDOWS);
+$vhosts=extractVHosts(VIRTUAL_HOSTS);
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 
 <head>
   <meta charset="UTF-8">
@@ -51,7 +83,41 @@ $hostnames = extractHostnames(HOST_NAMES_WINDOWS);
     <p>
       Esta es la página principal(<span class="fst-italic">index.php</span>) de la carpeta <span class="fw-bold">htdocs</span> de XAMPP. En esta página podras encontrar los <span class="fst-italic">host names</span> personalizados de Windows, los <span class="fst-italic">virtual host</span> de Apache y los proyectos(<span class="fst-italic">carpetas</span>) de la carpeta <span class="fw-bold">htdocs</span>
     </p>
-    <h4></h4>
+    <h4>Ubicación de los archivos en Windows</h4>
+    <p>
+      Se puede copear la ubicacion del archivo usando el boton correspondiente, esta direccion se pega en el explorador de archivos, Windows nos preguntara con que programa abrir el archivo, Visual Studio Code es el programa mas comodo para hacer cambios a estos archivos.
+    </p>
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th scope="col">Nombre Archivo</th>
+            <th scope="col">Ubicación</th>
+            <th scope="col">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>hosts</td>
+            <td><?= HOST_NAMES_WINDOWS  ?></td>
+            <td>
+              <button onclick="copyStringToClipboard('<?= escapeBackslashes(HOST_NAMES_WINDOWS) ?>')" class="btn btn-secondary">
+                <i class="bi bi-copy"></i> Copear Dirección
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <td>httpd-vhosts.conf</td>
+            <td><?= VIRTUAL_HOSTS  ?></td>
+            <td>
+              <button onclick="copyStringToClipboard('<?= escapeBackslashes(VIRTUAL_HOSTS) ?>')" class="btn btn-secondary">
+                <i class="bi bi-copy"></i> Copear Dirección
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
   <div class="container">
     <h3>Host en Windows</h1>
@@ -85,6 +151,39 @@ $hostnames = extractHostnames(HOST_NAMES_WINDOWS);
   </div>
   <div class="container">
     <h3>Virtual Host en Apache</h1>
+    <table class="table table-striped">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Nombre de la carpetat</th>
+            <th scope="col">Acción</th>
+            <th scope="col">Nombre del Virtual Host</th>
+            <th scope="col">Acción</th>            
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($vhosts as $clave => $vhostInfo) : ?>
+            <tr>
+              <th scope="row"><?= $clave+1  ?></th>
+              <td><?= $vhostInfo['DocumentRoot'] ?></td>
+              <td>                
+                <button onclick="copyStringToClipboard('<?= escapeBackslashes($vhostInfo['DocumentRoot']) ?>')" class="btn btn-secondary">
+                  <i class="bi bi-copy"></i> Copear Dirección
+                </button>
+              </td>
+              <td><?= $vhostInfo['ServerName'] ?></td>
+              <td>
+                <a href="http://<?= $vhostInfo['ServerName'] ?>" class="btn btn-primary" role="button" aria-disabled="true" target="_blank" rel="noopener noreferrer">
+                  <i class="bi bi-box-arrow-up-right"></i> Ver
+                </a>
+                <button onclick="copyStringToClipboard('<?= $vhostInfo['ServerName'] ?>')" class="btn btn-secondary">
+                  <i class="bi bi-copy"></i> Copear Link
+                </button>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
   </div>
   <div class="container">
     <h3>Proyectos en la carpeta de htdocs</h1>
